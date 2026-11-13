@@ -18,3 +18,9 @@ Preserve the original `resume_build.js` structure: Professional Summary, labelle
 Preserve the draft's cover letter, email, and explicit local date unless updating them is requested. Import with `application update <id> --draft <file>`, then `application build <id>`. Review all three outputs, inspect every PDF/DOCX page, and check for clipping, awkward breaks, missing links, invented claims, and placeholders. Default targets are two resume pages and one cover-letter page. Shorten content or ask for explicit acceptance before using `--allow-overflow`; never silently delete facts or reduce type to unreadable sizes.
 
 Report fit and gaps without inventing qualifications. Builds and edits invalidate prior approvals; this skill never approves or submits an application.
+
+Use professional, direct wording with complete sentences and specific, supported contributions. Avoid exaggerated praise, slogans, and em dashes. Use commas, colons, or separate sentences where appropriate. This applies to the resume, cover letter, email subject, and email body.
+
+Run `application claims <id>` after tailoring. Read each claim beside its supporting facts, revise unsupported wording, and present remaining flags for the user's decision. If the user explicitly confirms support, record the exact digest using `application claims <id> --confirm --digest <digest> --note <explanation>`. Do not attest on the user's behalf. A changed profile or draft requires a new claim review. The checks flag common risks and do not prove semantic accuracy.
+
+When LibreOffice is available, use `application build <id> --check-word` to measure DOCX pagination independently and inspect the generated Word preview PDFs. Otherwise state that Word pagination remains unverified.

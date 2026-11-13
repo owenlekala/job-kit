@@ -10,7 +10,7 @@ const files = execFileSync(
 const violations = [];
 for (const file of files) {
   if (
-    /(^|\/)(\.env(?:\..*)?|workspace|private|output|runtime)(\/|$)|\.(?:pdf|docx|log|auth\.json)$/.test(
+    /(^|\/)(\.env(?:\..*)?|workspace|private|output|runtime)(\/|$)|\.(?:pdf|docx|applykit|log|auth\.json)$/.test(
       file,
     )
   )

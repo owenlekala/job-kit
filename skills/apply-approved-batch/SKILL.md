@@ -16,3 +16,5 @@ If the temporary session expired, `application resume --restart` can replay only
 For `uncertain`, do not retry. Inspect the portal and obtain confirmation evidence. Only after determining the actual outcome use `application reconcile <id> --outcome submitted|registered|not-submitted --evidence <observed-evidence>`. `not-submitted` explicitly permits another attempt and must be supported by the user's verification. Never infer failure merely from a timeout. Existing submitted applications are skipped.
 
 Report confirmed submissions, handoffs, and uncertain outcomes separately. Confirmation selectors are automation evidence, not proof of receipt beyond what the portal displays. Run `browser close` when finished. No email is sent by this workflow.
+
+Use professional, clear wording without em dashes in any review or follow-up draft. The HTML review page assists inspection; approval remains an explicit terminal operation bound to its digest. After restoring a backup, rebuild documents and obtain a new approval. Closed jobs and jobs past their recorded deadline are blocked.

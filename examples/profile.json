@@ -25,7 +25,7 @@
     {
       "id": "delivery",
       "kind": "experience",
-      "text": "Software Engineer — Example Studio",
+      "text": "Software Engineer: Example Studio",
       "dates": "2022–2025",
       "context": "Cape Town, South Africa • Internal business software",
       "bullets": [
@@ -65,7 +65,7 @@
     {
       "id": "collaboration",
       "kind": "strength",
-      "text": "Practical Delivery — build tools that support internal business operations.",
+      "text": "Practical Delivery: build tools that support internal business operations.",
       "verified": true
     }
   ]

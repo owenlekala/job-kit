@@ -18,3 +18,9 @@ Follow the original `cover_letter.js` structure: a focused opening, concrete rel
 Use the user's local application date in `YYYY-MM-DD` format. Preserve resume selections and summary unless the user requested changes. Update the draft with `application update <id> --draft <private-file>` and run `application build <id>`.
 
 Review the generated Markdown, Word, and PDF letter plus `email.md`. Inspect page layout and verify the one-page letter target. Remove unresolved placeholders and generic claims. If additional profile facts are necessary, obtain verification before selecting them. Report the output directory and remaining questions. Do not approve applications, send email, or submit portal forms.
+
+Use professional, direct wording with complete sentences and specific, supported contributions. Avoid exaggerated praise, slogans, and em dashes. Use commas, colons, or separate sentences where appropriate. This applies to the resume, cover letter, email subject, and email body.
+
+Run `application claims <id>` after tailoring. Read each claim beside its supporting facts, revise unsupported wording, and present remaining flags for the user's decision. If the user explicitly confirms support, record the exact digest using `application claims <id> --confirm --digest <digest> --note <explanation>`. Do not attest on the user's behalf. A changed profile or draft requires a new claim review. The checks flag common risks and do not prove semantic accuracy.
+
+When LibreOffice is available, use `application build <id> --check-word` to measure DOCX pagination independently and inspect the generated Word preview PDFs. Otherwise state that Word pagination remains unverified.

@@ -83,7 +83,7 @@ export class Bitwarden implements CredentialVault {
     const payload = {
       ...template,
       type: 1,
-      name: `ApplyKit — ${tenant} — ${origin}`,
+      name: `ApplyKit: ${tenant}: ${origin}`,
       login: { username: email, password, totp: null, uris: [{ match: 1, uri: origin }] },
     };
     // Base64 is transport encoding, not encryption. Pass it over stdin, never argv.
