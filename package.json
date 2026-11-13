@@ -19,7 +19,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "setup": "node scripts/setup.mjs",
-    "privacy": "node scripts/privacy.mjs"
+    "privacy": "node scripts/privacy.mjs",
+    "wording": "node scripts/wording.mjs"
   },
   "dependencies": {
     "@fontsource/carlito": "^5.2.0",

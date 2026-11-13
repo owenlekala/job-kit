@@ -17,3 +17,5 @@ private/
 *.pdf
 *.docx
 *.auth.json
+
+*.applykit

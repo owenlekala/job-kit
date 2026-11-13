@@ -197,3 +197,75 @@ This is a single-user local toolkit, not a sandbox for an untrusted coding agent
 The bridge binds only to loopback, requires a random token, rejects browser-origin requests, and offers no arbitrary JavaScript execution or free-form credential retrieval. Tokens are stored only in private runtime metadata. Browser network access is restricted to reviewed origins; normal clicks cannot silently POST a form. Some sites need extra API/static origins, autosave requests, iframes, popups, SSO, custom widgets, or consent handling that the generic driver does not support. Pause and hand off rather than claiming success or bypassing protections. There is no CAPTCHA bypass, automatic inbox access, email sending, or guarantee of unattended application completion.
 
 The privacy check catches common tracked-secret/generated-file mistakes. It is not a substitute for inspecting `git diff --cached` before sharing. Your existing resume, cover-letter script, and personal notes remain outside this repository.
+
+## Safe profile changes and provenance
+
+Use `applykit profile edit` for guided entry of identity, preferences, links, experience, projects, skills, and education. Edited facts become unverified. The editor shows a change preview and requires a save decision. `init --interactive` refuses to replace an existing profile.
+
+Existing profiles require a preview before an import can replace or merge data:
+
+```sh
+applykit profile import /private/path/profile.json --mode merge --preview
+applykit profile import /private/path/profile.json --mode merge --review-digest PREVIEW-DIGEST
+applykit profile history
+applykit profile restore PROFILE-REVISION --preview
+applykit profile restore PROFILE-REVISION --review-digest PREVIEW-DIGEST
+```
+
+A merge retains facts whose IDs are absent from the incoming file; incoming identity and preference fields replace their counterparts. Use `--mode replace` for a complete replacement. Imports clear incoming verification flags unless `--confirm` is explicitly supplied to both the preview and save commands. The digest binds the input, current profile, mode, and verification choice. Any intervening edit requires a new preview. Each saved profile and verification change retains a recoverable revision.
+
+Facts can include `sources: [{ "reference": "source-id-or-document", "note": "What this supports" }]`, a verification record, and `conflicts: [{ "field": "education status", "alternatives": ["completed", "incomplete"], "resolved": "Applicant confirmed incomplete" }]`. Sources are references, not credentials or proof of truth. Update the actual fact to match its confirmed resolution. Unresolved conflicts block verification and document use. `profile verify <ids...> --confirm --note "How this was verified"` records the confirmation date and method. `profile validate` reports missing sources and legacy verification metadata.
+
+## Professional wording and claim review
+
+All document formats use professional, direct wording. Em dashes in rendered content are rejected with an actionable error. Use a comma, colon, or separate sentence. Source notes are preserved as supplied; edit and verify the facts selected for output.
+
+```sh
+applykit application claims APPLICATION-ID
+applykit application claims APPLICATION-ID --confirm --digest CLAIM-DIGEST --note "Evidence reviewed with the applicant"
+```
+
+The review places each proposed paragraph beside its referenced verified facts. It flags common unsupported seniority, tenure, qualifications, metrics, and technology claims, plus a changed professional headline. These are conservative review prompts, not a semantic truth detector. Revise unsupported statements. Explicit applicant confirmation can attest to a flagged claim using the exact current digest and an explanation. Profile or draft edits invalidate that attestation. Full batch review is still required even when no flags are reported.
+
+`batch review` writes a private HTML page alongside its JSON packet. Open the reported `reviewPage` in your browser to inspect document links and document previews, form answers, destinations, evidence, account references, page counts, and changes from the previous review. The page contains private information and stays in the private workspace. Embedded HTML previews show the shared document layout without requiring a browser PDF plugin. Use the PDF and Word links to inspect exact pagination. It cannot approve or submit applications. The terminal approval remains bound to the complete review digest.
+
+## Demo and independent Word layout checks
+
+Run `applykit demo` to generate a complete fictional document set in a new temporary workspace. Your real profile is untouched. The command reports the workspace and artifact directories. Temporary demo files remain available for inspection until you remove them or the operating system clears temporary storage.
+
+To check Word pagination separately, install LibreOffice and run:
+
+```sh
+applykit application build APPLICATION-ID --check-word
+```
+
+If `soffice` is not on your PATH, set `APPLYKIT_SOFFICE` to its executable path. This generates `resume.word-preview.pdf` and `cover-letter.word-preview.pdf`, records independent page counts, and applies the same overflow limits to both rendering paths. Conversion is optional and limited to 60 seconds. The preview measures LibreOffice layout; inspect the DOCX in your intended Word application as well. A normal build explicitly reports when Word pagination has not been checked.
+
+## Workspace recovery and encrypted backups
+
+CLI record updates use a durable transaction journal. A failed operation before commit leaves its staged changes unsaved. An interrupted committed journal is replayed under the workspace lock. `applykit workspace recover` explicitly performs this recovery. Submission attempts are checkpointed before an irreversible browser action so a crash cannot erase the uncertainty record. Browser actions themselves cannot be rolled back.
+
+```sh
+applykit workspace migrate
+applykit workspace backup /private/backup/location/job-search.applykit
+applykit --workspace /private/new-workspace workspace restore /private/backup/location/job-search.applykit --confirm
+```
+
+The migration validates portable records and upgrades older workspace metadata without discarding legacy facts. Backup prompts locally for a passphrase of at least 12 characters and encrypts the archive with AES-256-GCM and a scrypt-derived key. Keep the passphrase separately. It is not accepted in command arguments or printed. Backups are limited to 256 MB of workspace file content, reject symbolic links, and exclude runtime sessions, locks, and journals. Existing destination files are never overwritten. Bitwarden backups remain separate.
+
+Restore requires a new workspace, verifies archive integrity, and revokes saved batch approvals. Applications interrupted during an irreversible action remain uncertain. Other active applications return to preparation. Rebuild, review, and approve before automation. Review packets may contain old absolute paths for historical reference; create a new review for current document links.
+
+## Job lifecycle and follow-up planning
+
+```sh
+applykit jobs list --status open --query backend
+applykit jobs list --company COMPANY-ID --due-before 2026-12-01
+applykit jobs update JOB-ID --deadline 2026-12-01
+applykit jobs update JOB-ID --status closed
+applykit application track APPLICATION-ID --follow-up 2026-12-08 --note "Check for a response"
+applykit application status --state submitted --follow-up-before 2026-12-08
+```
+
+Duplicate detection removes common tracking parameters from URLs while preserving requisition identifiers. It also flags matching company/title/location records. Closed jobs and jobs past their recorded deadline are blocked from preparation and approval checks. Follow-up dates and notes provide planning support; they do not send messages or create scheduled reminders.
+
+Embedded non-authentication form fields can use a reviewed selector such as `#application-frame >>>frame>>> #name`. Each frame origin must be allowed, and final form checks must belong to the submit button's frame. Inspection reports embedded fields and custom widgets without exposing input values. Unsupported widget selections, embedded authentication, SSO popups, and unreviewed autosave requests retain explicit handoffs. Fixture tests verify these boundaries; they do not establish universal live-portal compatibility. See the official [Playwright frames](https://playwright.dev/docs/frames) and [locator](https://playwright.dev/docs/locators) documentation for the underlying browser behavior.

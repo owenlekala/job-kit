@@ -96,3 +96,21 @@ A batch review includes source profile/job/company records, tailored draft, port
 Before register/submit, the kit saves a private attempt snapshot and a `commit-started` event. If confirmation cannot be verified or the process exits during the commit, the result is uncertain. No automatic retry occurs. Reconciliation requires observed evidence and a matching outcome; registration cannot be reconciled as a submitted application.
 
 Temporary browser state is not saved for restart. Reversible preparation can be explicitly restarted before any commit. Once an account has been created, use a revised plan that logs in rather than repeating registration. All source snapshots and artifact revisions are retained so later profile/job edits do not erase what was submitted.
+
+## Profile revisions and claim review
+
+`profile-history/<revision>.json` contains `{ version: 1, id, at, reason, profile }`. The active profile remains `profile.json`. Existing imports require a preview digest bound to the current profile, incoming input, merge/replace mode, and verification choice. The digest is recomputed before saving.
+
+Fact provenance is additive to v1 records: `sources` holds `{ reference, note? }` entries, `verification` holds `{ at, method, note? }`, and `conflicts` holds `{ field, alternatives, resolved? }` entries. Verification methods are `user-confirmation`, `reviewed-import`, or `legacy`. Old verified facts remain readable without fabricated source information. Unresolved conflicts block verification and selection.
+
+`applications/<id>/claims.json` stores `{ digest, at, note }` after explicit claim verification. The digest binds the full profile, draft, and claim review. This attestation does not authorize submission. Batch review JSON includes each claim, its evidence, heuristic flags, and the claim attestation when present. Its HTML counterpart is a private, read-only view with relative document links.
+
+Jobs optionally include `status`, `deadline`, and `closedAt`. Applications optionally include `followUpAt` and `trackingNote`. Builds optionally include `wordPages`; independent Word preview PDFs are included in `files` and integrity checks. These additions preserve existing version 1 records. Workspace configuration uses optional `schemaVersion: 2` to record the completed additive upgrade.
+
+## Recovery boundaries
+
+Under the workspace lock, writes are staged and reads see staged values. A checkpoint durably writes `.transaction.json` before replaying its records with atomic file replacement. Recovery is idempotent. Reads outside a transaction reject an unfinished journal until recovery. Errors before the first checkpoint discard staged changes. A journal that failed during replay must be recovered before further mutations.
+
+Application execution checkpoints the attempt snapshot and `commit-started` event before account registration or submission. It checkpoints successful commits before continuing. No storage transaction can roll back an external action. An interrupted action with no verified outcome remains uncertain.
+
+Encrypted `.applykit` archives contain versioned, hashed file entries encrypted using AES-256-GCM, a random 16-byte salt, a 12-byte IV, and a 32-byte key derived with scrypt (`N=32768`, `r=8`, `p=1`). Runtime directories, hidden files, locks, journals, and browser sessions are excluded. Restore validates paths and hashes before committing files, revokes batch approvals, and preserves reconciliation requirements. Vault records are references only; back up Bitwarden separately.

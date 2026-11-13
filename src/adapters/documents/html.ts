@@ -18,7 +18,7 @@ function entryHtml(entry: ResumeEntry): string {
     case 'experience':
       return `<div class="job-header"><strong>${escape(entry.title)}</strong>${entry.dates ? `<span class="dates">${escape(entry.dates)}</span>` : ''}</div>${entry.context ? `<p class="job-context">${escape(entry.context)}</p>` : ''}${entry.bullets.length ? `<ul class="bullets">${entry.bullets.map((line) => `<li>${escape(line)}</li>`).join('')}</ul>` : ''}`;
     case 'project':
-      return `<p class="project">${entry.url ? `<a href="${escape(entry.url)}">${escape(entry.name)}</a>` : `<strong>${escape(entry.name)}</strong>`}${entry.description ? ` — ${escape(entry.description)}` : ''}${entry.technologies ? `<span class="technologies">&nbsp;&nbsp;(${escape(entry.technologies)})</span>` : ''}</p>`;
+      return `<p class="project">${entry.url ? `<a href="${escape(entry.url)}">${escape(entry.name)}</a>` : `<strong>${escape(entry.name)}</strong>`}${entry.description ? `: ${escape(entry.description)}` : ''}${entry.technologies ? `<span class="technologies">&nbsp;&nbsp;(${escape(entry.technologies)})</span>` : ''}</p>`;
     case 'education':
       return `<p class="qualification">${escape(entry.qualification)}</p>${entry.details ? `<p class="education-details">${escape(entry.details)}</p>` : ''}${entry.description ? `<p class="summary">${escape(entry.description)}</p>` : ''}`;
   }

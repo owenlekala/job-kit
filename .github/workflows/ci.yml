@@ -20,8 +20,14 @@ jobs:
       - run: npm run check
       - run: npm run format:check
       - run: npm run build
+      - name: Install independent Word renderer (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libreoffice-writer
       - run: npm test
+        env:
+          APPLYKIT_TEST_WORD: ${{ runner.os == 'Linux' && '1' || '' }}
       - run: npm run privacy
+      - run: npm run wording
       - name: Verify setup wrapper (Unix)
         if: runner.os != 'Windows'
         env:

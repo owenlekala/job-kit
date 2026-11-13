@@ -1,4 +1,11 @@
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type Locator,
+  type FrameLocator,
+} from 'playwright';
 import { checkWebUrl } from '../domain/models.js';
 import type { BrowserDriver, PageSnapshot } from '../application/ports.js';
 
@@ -68,6 +75,24 @@ export class PlaywrightBrowser implements BrowserDriver {
   private guard(page: Page) {
     if (!this.allowedOrigins.has(new URL(page.url()).origin))
       throw new Error('Browser left the reviewed portal origins');
+  }
+  private async target(selector: string): Promise<Locator> {
+    const page = await this.active();
+    this.guard(page);
+    const parts = selector.split(' >>>frame>>> ');
+    let scope: Page | FrameLocator = page;
+    for (const frame of parts.slice(0, -1)) scope = scope.frameLocator(frame);
+    const locator = scope.locator(parts.at(-1)!);
+    const handle = await locator.elementHandle();
+    if (!handle) throw new Error('Reviewed field was not found');
+    try {
+      const frame = await handle.ownerFrame();
+      if (!frame || !this.allowedOrigins.has(new URL(frame.url()).origin))
+        throw new Error('Field frame origin has not been reviewed');
+    } finally {
+      await handle.dispose();
+    }
+    return locator;
   }
   async navigate(url: string) {
     checkWebUrl(url, this.allowLocalhost);
@@ -143,6 +168,74 @@ export class PlaywrightBrowser implements BrowserDriver {
           .map((e) => ({ selector: e.selector, text: e.text })),
       };
     });
+    const embedded: {
+      selector: string;
+      url: string;
+      reviewed: boolean;
+      message: string;
+      fields?: unknown[];
+      buttons?: unknown[];
+      text?: string;
+    }[] = [];
+    for (const frame of page.frames().filter((frame) => frame !== page.mainFrame())) {
+      const handle = await frame.frameElement();
+      const selector = await handle.evaluate((element) =>
+        element instanceof Element && element.id ? '#' + CSS.escape(element.id) : 'iframe',
+      );
+      await handle.dispose();
+      const reviewed = this.allowedOrigins.has(new URL(frame.url()).origin);
+      const content = reviewed
+        ? await frame.evaluate(() => ({
+            text: document.body.innerText.slice(0, 6000),
+            fields: Array.from(document.querySelectorAll('input,textarea,select'))
+              .filter((element) => element.getClientRects().length > 0)
+              .map((element) => ({
+                selector: element.id ? '#' + CSS.escape(element.id) : undefined,
+                type: element.getAttribute('type') ?? element.tagName.toLowerCase(),
+                label:
+                  element.getAttribute('aria-label') ??
+                  Array.from((element as HTMLInputElement).labels ?? [])
+                    .map((label) => label.textContent)
+                    .join(' '),
+              })),
+            buttons: Array.from(document.querySelectorAll('button,a'))
+              .filter((element) => element.getClientRects().length > 0)
+              .map((element) => ({
+                selector: element.id ? '#' + CSS.escape(element.id) : undefined,
+                text: element.textContent?.trim().slice(0, 200),
+              })),
+          }))
+        : {};
+      embedded.push({
+        ...content,
+        selector,
+        url: new URL(frame.url()).origin + new URL(frame.url()).pathname,
+        reviewed,
+        message:
+          frame.parentFrame() !== page.mainFrame()
+            ? 'Nested frame: use a complete reviewed frame selector chain or hand off.'
+            : `Use ${selector} >>>frame>>> followed by the control selector. Inspect visible controls before adding answers.`,
+      });
+    }
+    const widgets = await page
+      .locator('[role=combobox],[role=listbox],[role=option],[role=checkbox]')
+      .evaluateAll((elements) =>
+        elements
+          .filter((element) => element.getClientRects().length > 0)
+          .map((element) => ({
+            role: element.getAttribute('role'),
+            label: element.getAttribute('aria-label') ?? element.textContent?.trim().slice(0, 200),
+            selector: element.id ? '#' + CSS.escape(element.id) : undefined,
+          })),
+      );
+    Object.assign(result, {
+      embedded,
+      widgets,
+      limitations: [
+        'SSO popups and embedded authentication require a user handoff.',
+        'Unreviewed autosave requests are blocked.',
+      ],
+    });
     // Do not return input values or query strings. Redact values injected from the vault.
     result.url = new URL(result.url).origin + new URL(result.url).pathname;
     let safe = JSON.stringify(result);
@@ -152,9 +245,13 @@ export class PlaywrightBrowser implements BrowserDriver {
   async fill(selector: string, value: string, sensitive = false) {
     const page = await this.active();
     this.guard(page);
-    const field = page.locator(selector);
+    const field = await this.target(selector);
     if (!sensitive && (await field.getAttribute('type')) === 'password')
       throw new Error('Password fields require a vault credential step');
+    if (sensitive && selector.includes(' >>>frame>>> '))
+      throw new Error(
+        'Embedded authentication requires a user handoff. Vault injection is limited to the reviewed top-level portal.',
+      );
     if (sensitive) this.secrets.add(value);
     await field.fill(value);
     if (sensitive && (await field.inputValue()) !== value)
@@ -166,19 +263,21 @@ export class PlaywrightBrowser implements BrowserDriver {
   async check(selector: string, value: boolean) {
     const page = await this.active();
     this.guard(page);
-    await page.locator(selector).setChecked(value);
+    await (await this.target(selector)).setChecked(value);
   }
   async select(selector: string, value: string) {
     const page = await this.active();
     this.guard(page);
-    await page.locator(selector).selectOption(value);
+    await (await this.target(selector)).selectOption(value);
   }
   async upload(selector: string, bytes: Uint8Array, name: string) {
     const page = await this.active();
     this.guard(page);
     this.intent = 'upload';
     try {
-      await page.locator(selector).setInputFiles({
+      await (
+        await this.target(selector)
+      ).setInputFiles({
         name,
         mimeType: name.endsWith('.pdf')
           ? 'application/pdf'
@@ -192,7 +291,7 @@ export class PlaywrightBrowser implements BrowserDriver {
   async click(selector: string, intent: 'click' | 'login' | 'register' | 'submit' = 'click') {
     const page = await this.active();
     this.guard(page);
-    const element = page.locator(selector);
+    const element = await this.target(selector);
     if (intent === 'click') {
       const submits = await element.evaluate(
         (e) =>
@@ -205,7 +304,7 @@ export class PlaywrightBrowser implements BrowserDriver {
         );
     }
     this.intent = intent;
-    await page.evaluate((allow) => {
+    await element.evaluate((_element, allow) => {
       (window as unknown as Record<string, unknown>).__applykitCommit = allow;
     }, intent !== 'click');
     try {
@@ -214,24 +313,28 @@ export class PlaywrightBrowser implements BrowserDriver {
       this.guard(page);
     } finally {
       this.intent = 'inspect';
-      await page
-        .evaluate(() => {
-          (window as unknown as Record<string, unknown>).__applykitCommit = false;
-        })
-        .catch(() => {});
+      await Promise.all(
+        page.frames().map((frame) =>
+          frame
+            .evaluate(() => {
+              (window as unknown as Record<string, unknown>).__applykitCommit = false;
+            })
+            .catch(() => {}),
+        ),
+      );
     }
   }
   async wait(selector: string, expectedText?: string) {
     const page = await this.active();
     this.guard(page);
-    await page.locator(selector).waitFor({ state: 'visible' });
-    if (expectedText && !(await page.locator(selector).innerText()).includes(expectedText))
+    await (await this.target(selector)).waitFor({ state: 'visible' });
+    if (expectedText && !(await (await this.target(selector)).innerText()).includes(expectedText))
       throw new Error('Confirmation text does not match the reviewed expectation');
   }
   async read(selector: string) {
     const page = await this.active();
     this.guard(page);
-    const field = page.locator(selector);
+    const field = await this.target(selector);
     if ((await field.getAttribute('type')) === 'password')
       throw new Error('Password values cannot be inspected');
     return ['checkbox', 'radio'].includes((await field.getAttribute('type')) ?? '')
@@ -241,14 +344,14 @@ export class PlaywrightBrowser implements BrowserDriver {
   async fileNames(selector: string) {
     const page = await this.active();
     this.guard(page);
-    return page
-      .locator(selector)
-      .evaluate((e) => Array.from((e as HTMLInputElement).files ?? []).map((f) => f.name));
+    return (await this.target(selector)).evaluate((e) =>
+      Array.from((e as HTMLInputElement).files ?? []).map((f) => f.name),
+    );
   }
   async fileHashes(selector: string): Promise<Record<string, string>> {
     const page = await this.active();
     this.guard(page);
-    return page.locator(selector).evaluate(async (e) =>
+    return (await this.target(selector)).evaluate(async (e) =>
       Object.fromEntries(
         await Promise.all(
           Array.from((e as HTMLInputElement).files ?? []).map(async (file) => [
@@ -266,10 +369,36 @@ export class PlaywrightBrowser implements BrowserDriver {
   async verifyForm(submitSelector: string, checked: string[], credentialSelectors: string[]) {
     const page = await this.active();
     this.guard(page);
-    const valid = await page.locator(submitSelector).evaluate(
+    const framePrefix = submitSelector.includes(' >>>frame>>> ')
+      ? submitSelector.slice(
+          0,
+          submitSelector.lastIndexOf(' >>>frame>>> ') + ' >>>frame>>> '.length,
+        )
+      : '';
+    if (
+      [...checked, ...credentialSelectors].some(
+        (selector) =>
+          !selector.startsWith(framePrefix) ||
+          selector.slice(framePrefix.length).includes(' >>>frame>>> '),
+      )
+    )
+      throw new Error('Form checks must belong to the same frame as the submit button');
+    const valid = await (
+      await this.target(submitSelector)
+    ).evaluate(
       (button, { checked, credentialSelectors }) => {
         const root = button.closest('form') ?? document;
-        return Array.from(root.querySelectorAll('input,select,textarea')).every((element) => {
+        return Array.from(
+          root.querySelectorAll(
+            'input,select,textarea,[role=combobox],[role=listbox],[role=checkbox],[contenteditable=true]',
+          ),
+        ).every((element) => {
+          if (!(
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLSelectElement ||
+            element instanceof HTMLTextAreaElement
+          ))
+            return !element.getClientRects().length;
           const field = element as HTMLInputElement;
           if (
             !field.getClientRects().length ||
@@ -290,12 +419,17 @@ export class PlaywrightBrowser implements BrowserDriver {
           return selectors.some((s) => field.matches(s));
         });
       },
-      { checked, credentialSelectors },
+      {
+        checked: checked.map((selector) => selector.slice(framePrefix.length)),
+        credentialSelectors: credentialSelectors.map((selector) =>
+          selector.slice(framePrefix.length),
+        ),
+      },
     );
     if (!valid) throw new Error('The form has unreviewed, invalid, or missing required fields');
     for (const selector of credentialSelectors) {
       const expected = this.injected.get(selector);
-      if (expected === undefined || (await page.locator(selector).inputValue()) !== expected)
+      if (expected === undefined || (await (await this.target(selector)).inputValue()) !== expected)
         throw new Error('A credential changed after vault injection');
     }
   }

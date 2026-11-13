@@ -9,9 +9,9 @@ function entryMarkdown(entry: ResumeEntry): string {
     case 'skill':
       return `${entry.label ? `**${entry.label}:** ` : ''}${entry.text}`;
     case 'experience':
-      return `**${entry.title}**${entry.dates ? ` — *${entry.dates}*` : ''}${entry.context ? `\n\n*${entry.context}*` : ''}${entry.bullets.length ? '\n\n' + entry.bullets.map((p) => `- ${p.replaceAll('\n', '\n  ')}`).join('\n') : ''}`;
+      return `**${entry.title}**${entry.dates ? `: *${entry.dates}*` : ''}${entry.context ? `\n\n*${entry.context}*` : ''}${entry.bullets.length ? '\n\n' + entry.bullets.map((p) => `- ${p.replaceAll('\n', '\n  ')}`).join('\n') : ''}`;
     case 'project':
-      return `${entry.url ? `[${entry.name}](${entry.url})` : `**${entry.name}**`}${entry.description ? ` — ${entry.description}` : ''}${entry.technologies ? `  *(${entry.technologies})*` : ''}`;
+      return `${entry.url ? `[${entry.name}](${entry.url})` : `**${entry.name}**`}${entry.description ? `: ${entry.description}` : ''}${entry.technologies ? `  *(${entry.technologies})*` : ''}`;
     case 'education':
       return `**${entry.qualification}**${entry.details ? `\n\n*${entry.details}*` : ''}${entry.description ? `\n\n${entry.description}` : ''}`;
   }

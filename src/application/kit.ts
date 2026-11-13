@@ -19,6 +19,10 @@ import {
   validateEvidence,
 } from '../domain/models.js';
 import { documentModel } from '../domain/documents.js';
+import { Profiles } from './profiles.js';
+import type { ImportMode } from '../domain/profile-changes.js';
+import { reviewClaims, claimReviewDigest } from '../domain/claims.js';
+import { duplicateJob, localDate } from '../domain/jobs.js';
 import { startingDraft } from '../domain/drafting.js';
 import type { ArtifactRenderer, CredentialVault, Workspace } from './ports.js';
 
@@ -56,23 +60,15 @@ export class Kit {
     });
     return profile;
   }
-  async importProfile(value: unknown, confirm = false) {
-    const config = await this.config();
-    assertNoSecrets(value);
-    const p = Profile.parse(value);
-    p.contact.links.forEach((link) => checkWebUrl(link.url, config.allowLocalhost));
-    p.facts.forEach((fact) => {
-      if (fact.kind === 'project' && fact.url) checkWebUrl(fact.url, config.allowLocalhost);
-    });
-    if (!confirm) p.facts = p.facts.map((f) => ({ ...f, verified: false }));
-    await this.store.write('profile.json', p);
-    return {
-      facts: p.facts.length,
-      verified: p.facts.filter((f) => f.verified).length,
-      notice: confirm
-        ? 'Verification flags preserved by explicit confirmation'
-        : 'All imported facts are unverified; review them before confirming',
-    };
+  async previewProfile(value: unknown, mode: ImportMode, confirm = false) {
+    return new Profiles(this.store).preview(value, mode, confirm);
+  }
+  async importProfile(
+    value: unknown,
+    confirm = false,
+    options: { mode?: ImportMode; reviewDigest?: string } = {},
+  ) {
+    return new Profiles(this.store).import(value, confirm, options);
   }
   async importSource(name: string, source: string) {
     await this.config();
@@ -93,15 +89,8 @@ export class Kit {
         'Source saved without execution. Extract facts into profile JSON, resolve conflicts, and explicitly confirm them.',
     };
   }
-  async verifyFacts(factIds: string[]) {
-    const p = await this.profile();
-    for (const key of factIds) {
-      const fact = p.facts.find((f) => f.id === key);
-      if (!fact) throw new Error(`Unknown fact: ${key}`);
-      fact.verified = true;
-    }
-    await this.store.write('profile.json', p);
-    return { verified: factIds };
+  async verifyFacts(factIds: string[], note?: string) {
+    return new Profiles(this.store).verify(factIds, note);
   }
   async validateProfile() {
     const p = await this.profile();
@@ -111,6 +100,9 @@ export class Kit {
       valid: true,
       verified: p.facts.filter((f) => f.verified).length,
       unverified: p.facts.filter((f) => !f.verified).map((f) => f.id),
+      conflicts: p.facts.filter((f) => f.conflicts?.some((c) => !c.resolved)).map((f) => f.id),
+      missingSources: p.facts.filter((f) => !f.sources?.length).map((f) => f.id),
+      legacyVerification: p.facts.filter((f) => f.verified && !f.verification).map((f) => f.id),
     };
   }
   async importCompanies(values: unknown[]) {
@@ -136,6 +128,11 @@ export class Kit {
     checkWebUrl(job.url, cfg.allowLocalhost);
     checkWebUrl(job.sourceUrl, cfg.allowLocalhost);
     await this.store.get('companies', job.companyId, Company);
+    const duplicate = duplicateJob(await this.store.list('jobs', Job), job);
+    if (duplicate)
+      throw new Error(
+        `Possible duplicate job: ${duplicate.id}. Update that record or provide a distinct role and location.`,
+      );
     await this.store.put('jobs', job.id, job);
     return job;
   }
@@ -225,6 +222,12 @@ export class Kit {
     const job = await this.store.get('jobs', jobId, Job),
       company = await this.store.get('companies', job.companyId, Company),
       profile = await this.profile();
+    if (job.status === 'closed')
+      throw new Error('This job is closed. Reopen it only after verifying the posting.');
+    if (job.deadline && job.deadline < localDate(new Date()))
+      throw new Error(
+        'This job deadline has passed. Verify and update the posting before preparing an application.',
+      );
     const selected = selectedIds ?? profile.facts.filter((f) => f.verified).map((f) => f.id);
     if (!selected.length)
       throw new Error('No verified facts available; confirm profile facts first');
@@ -304,7 +307,7 @@ export class Kit {
       if (!origins.has(account.origin)) throw new Error('Account origin is not allowed');
     return accounts;
   }
-  async build(applicationId: string, acceptOverflow = false) {
+  async build(applicationId: string, acceptOverflow = false, checkWord = false) {
     const c = await this.context(applicationId);
     if (
       ['running', 'submitted', 'uncertain', 'interview', 'rejected', 'withdrawn'].includes(
@@ -322,7 +325,7 @@ export class Kit {
       job: c.job,
       company: c.company,
     });
-    const output = await this.renderer.render(model);
+    const output = await this.renderer.render(model, { checkWord });
     const revision = newId('build');
     const files: Record<string, string> = {};
     for (const name of requiredFiles) {
@@ -331,12 +334,25 @@ export class Kit {
       files[name] = byteHash(bytes);
       await this.store.writeBytes(`artifacts/${applicationId}/${revision}/${name}`, bytes);
     }
+    for (const name of [
+      'resume.word-preview.pdf',
+      'cover-letter.word-preview.pdf',
+      'resume.preview.html',
+      'cover-letter.preview.html',
+    ]) {
+      const bytes = output.files[name];
+      if (bytes) {
+        files[name] = byteHash(bytes);
+        await this.store.writeBytes(`artifacts/${applicationId}/${revision}/${name}`, bytes);
+      }
+    }
     const build = Build.parse({
       version: 1,
       revision,
       sourceDigest,
       files,
       pages: output.pages,
+      ...(output.wordPages ? { wordPages: output.wordPages } : {}),
       overflowAccepted: acceptOverflow,
       builtAt: now(),
       ...(output.warnings?.length ? { warnings: output.warnings } : {}),
@@ -395,7 +411,11 @@ export class Kit {
     );
   }
   overflow(build: Build) {
-    return build.pages.resume > 2 || build.pages.coverLetter > 1;
+    return (
+      build.pages.resume > 2 ||
+      build.pages.coverLetter > 1 ||
+      (build.wordPages ? build.wordPages.resume > 2 || build.wordPages.coverLetter > 1 : false)
+    );
   }
   async fingerprint(applicationId: string) {
     const c = await this.context(applicationId);
@@ -413,7 +433,7 @@ export class Kit {
       throw new Error(
         'Document page target exceeded; shorten content or explicitly accept overflow',
       );
-    for (const name of requiredFiles)
+    for (const name of new Set([...requiredFiles, ...Object.keys(build.files)]))
       if (
         !build.files[name] ||
         byteHash(
@@ -421,7 +441,29 @@ export class Kit {
         ) !== build.files[name]
       )
         throw new Error(`Document changed or missing: ${name}; rebuild and review again`);
+    const claims = reviewClaims(c.profile, c.draft);
+    const claimDigest = claimReviewDigest(c.profile, c.draft);
+    const attestation = await this.store
+      .read(
+        `applications/${applicationId}/claims.json`,
+        z.object({ digest: z.string(), at: z.string(), note: z.string() }),
+      )
+      .catch((e) => {
+        if ((e as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+        throw e;
+      });
+    if (claims.some((claim) => claim.flags.length) && attestation?.digest !== claimDigest)
+      throw new Error(
+        'Wording requires evidence review. Run application claims, revise unsupported statements, or explicitly attest to the exact review digest.',
+      );
+    if (c.job.status === 'closed' || (c.job.deadline && c.job.deadline < localDate(new Date())))
+      throw new Error(
+        'Job is closed or past its deadline; verify the posting before review or submission.',
+      );
     return {
+      claims,
+      claimDigest,
+      ...(attestation ? { claimAttestation: attestation } : {}),
       hash: digest({
         job: c.job,
         company: c.company,
@@ -430,6 +472,9 @@ export class Kit {
         packet: c.packet,
         build,
         accounts,
+        claims,
+        claimDigest,
+        attestation,
       }),
       ...c,
       build,
@@ -465,6 +510,9 @@ export class Kit {
         job: e.job,
         company: e.company,
         draft: e.draft,
+        claims: e.claims,
+        claimDigest: e.claimDigest,
+        claimAttestation: e.claimAttestation,
         packet: e.packet,
         accounts: e.accounts,
         documents: {
@@ -473,6 +521,12 @@ export class Kit {
         },
       })),
     };
+    try {
+      const previous = await this.store.read(`reviews/${batchId}.json`, z.unknown());
+      await this.store.write(`reviews/${batchId}.previous.json`, previous);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
     await this.store.write(`reviews/${batchId}.json`, packet);
     await this.store.put('batches', batchId, batch);
     return {
@@ -548,6 +602,35 @@ export class Kit {
       ? this.store.get('applications', applicationId, Application)
       : this.store.list('applications', Application);
   }
+  async claims(applicationId: string, approval?: { digest: string; note: string }) {
+    const c = await this.context(applicationId);
+    validateEvidence(c.profile, c.draft);
+    const result = {
+      digest: claimReviewDigest(c.profile, c.draft),
+      claims: reviewClaims(c.profile, c.draft),
+      notice:
+        'Flags are review prompts. They do not establish whether a claim is true. Inspect every claim and its evidence.',
+    };
+    if (approval) {
+      if (approval.digest !== result.digest || !approval.note.trim())
+        throw new Error(
+          'Read the current claim review and provide its digest and a verification note',
+        );
+      await this.store.write(`applications/${applicationId}/claims.json`, {
+        digest: result.digest,
+        at: now(),
+        note: approval.note,
+      });
+    }
+    return result;
+  }
+  async track(applicationId: string, followUpAt?: string, note?: string) {
+    const app = await this.store.get('applications', applicationId, Application);
+    if (followUpAt !== undefined) app.followUpAt = z.iso.date().parse(followUpAt);
+    if (note !== undefined) app.trackingNote = textNote(note);
+    await this.event(app, app.state, 'tracking', 'Follow-up details updated');
+    return app;
+  }
   async updateStatus(
     applicationId: string,
     state: 'submitted' | 'interview' | 'rejected' | 'withdrawn',
@@ -566,4 +649,8 @@ export class Kit {
     await this.event(app, state, state, evidence);
     return app;
   }
+}
+
+function textNote(value: string) {
+  return z.string().trim().max(20000).parse(value);
 }
