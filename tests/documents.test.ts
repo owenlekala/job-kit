@@ -74,7 +74,7 @@ test('Word templates retain the original scripts’ measurements and document bl
         ]);
         assert.equal(attributes(headings[0]!, 'w:bottom')['w:sz'], '6');
         assert.equal(attributes(headings[0]!, 'w:spacing')['w:before'], '280');
-        const job = ps.find((p) => plain(p).includes('Software Engineer — Example Studio'))!;
+        const job = ps.find((p) => plain(p).includes('Software Engineer: Example Studio'))!;
         assert.match(job, /<w:tab w:val="right" w:pos="9360"/);
         assert.match(job, /<w:tab\/>/);
         assert.match(job, /2022–2025/);

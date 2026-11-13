@@ -10,7 +10,7 @@ import {
   assertNoSecrets,
   validateEvidence,
 } from '../src/domain/models.js';
-import { setup, seed } from './support.js';
+import { setup, seed, replaceProfile } from './support.js';
 
 test('stable hashing ignores object property order but binds every value', () => {
   assert.equal(digest({ b: 2, a: 1 }), digest({ a: 1, b: 2 }));
@@ -52,7 +52,7 @@ test('imported profiles require explicit verification and source JS is not execu
   const s = await setup();
   try {
     const p = await s.kit.profile();
-    await s.kit.importProfile(p);
+    await replaceProfile(s.kit, p);
     assert.equal((await s.kit.validateProfile()).verified, 0);
     await s.kit.verifyFacts(['delivery']);
     assert.equal((await s.kit.validateProfile()).verified, 1);

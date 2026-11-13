@@ -12,6 +12,7 @@ export interface Workspace {
   writeBytes(relative: string, data: string | Uint8Array): Promise<void>;
   readBytes(relative: string): Promise<Uint8Array>;
   list<T>(collection: string, schema: z.ZodType<T>): Promise<T[]>;
+  checkpoint(): Promise<void>;
   lock<T>(fn: () => Promise<T>): Promise<T>;
 }
 export interface CredentialVault {
@@ -19,10 +20,14 @@ export interface CredentialVault {
   create(email: string, origin: string, tenant: string): Promise<string>;
 }
 export interface ArtifactRenderer {
-  render(model: DocumentModel): Promise<{
+  render(
+    model: DocumentModel,
+    options?: { checkWord?: boolean },
+  ): Promise<{
     files: Record<string, Uint8Array>;
     pages: { resume: number; coverLetter: number };
     warnings?: string[];
+    wordPages?: { resume: number; coverLetter: number };
   }>;
 }
 export interface PageSnapshot {

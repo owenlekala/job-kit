@@ -1,0 +1,23 @@
+[
+  {
+    "name": "long-name",
+    "applicantName": "Alexandra Morgan-Williams Ndlovu",
+    "experienceCount": 1,
+    "longLink": false,
+    "minimumResumePages": 1
+  },
+  {
+    "name": "extensive-experience",
+    "applicantName": "Alex Morgan",
+    "experienceCount": 16,
+    "longLink": false,
+    "minimumResumePages": 3
+  },
+  {
+    "name": "long-link",
+    "applicantName": "Alex Morgan",
+    "experienceCount": 1,
+    "longLink": true,
+    "minimumResumePages": 1
+  }
+]

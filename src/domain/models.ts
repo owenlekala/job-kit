@@ -5,7 +5,11 @@ export const id = z
   .string()
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/, 'Use 1–100 letters, digits, underscores or hyphens');
 export const WorkspaceConfig = z
-  .object({ version: z.literal(1), allowLocalhost: z.boolean().default(false) })
+  .object({
+    version: z.literal(1),
+    schemaVersion: z.literal(2).optional(),
+    allowLocalhost: z.boolean().default(false),
+  })
   .strict();
 export const text = z.string().trim().min(1).max(20000);
 export const url = z
@@ -14,7 +18,27 @@ export const url = z
   .refine((v) => ['https:', 'http:'].includes(new URL(v).protocol), 'Use an HTTP(S) URL')
   .refine((v) => !new URL(v).username && !new URL(v).password, 'URLs may not contain credentials');
 const timestamp = z.string().datetime();
-const factFields = { id, text, verified: z.boolean().default(false) };
+export const Verification = z
+  .object({
+    at: timestamp,
+    method: z.enum(['user-confirmation', 'reviewed-import', 'legacy']),
+    note: text.optional(),
+  })
+  .strict();
+const factFields = {
+  id,
+  text,
+  verified: z.boolean().default(false),
+  sources: z.array(z.object({ reference: text, note: text.optional() }).strict()).optional(),
+  verification: Verification.optional(),
+  conflicts: z
+    .array(
+      z
+        .object({ field: text, alternatives: z.array(text).min(2), resolved: text.optional() })
+        .strict(),
+    )
+    .optional(),
+};
 export const Fact = z.discriminatedUnion('kind', [
   z.object({ ...factFields, kind: z.literal('summary') }).strict(),
   z.object({ ...factFields, kind: z.literal('availability') }).strict(),
@@ -104,6 +128,9 @@ export const Job = z
     sourceUrl: url,
     verifiedAt: timestamp,
     location: text.optional(),
+    status: z.enum(['open', 'closed']).optional(),
+    deadline: z.iso.date().optional(),
+    closedAt: timestamp.optional(),
   })
   .strict();
 export type Job = z.infer<typeof Job>;
@@ -250,6 +277,8 @@ export const Application = z
     ]),
     nextStep: z.number().int().nonnegative().default(0),
     updatedAt: timestamp,
+    followUpAt: z.iso.date().optional(),
+    trackingNote: text.optional(),
     events: z.array(z.object({ at: timestamp, type: text, message: text }).strict()).default([]),
   })
   .strict();
@@ -273,6 +302,9 @@ export const Build = z
     sourceDigest: text,
     files: z.record(text, text),
     pages: z.object({ resume: z.number().int(), coverLetter: z.number().int() }),
+    wordPages: z
+      .object({ resume: z.number().int().positive(), coverLetter: z.number().int().positive() })
+      .optional(),
     overflowAccepted: z.boolean(),
     builtAt: timestamp,
     warnings: z.array(text).optional(),
@@ -309,6 +341,9 @@ export function validateEvidence(profile: Profile, draft: Draft): void {
   const verified = new Set(profile.facts.filter((f) => f.verified).map((f) => f.id));
   for (const factId of selected)
     if (!verified.has(factId)) throw new Error(`Fact ${factId} is missing or unverified`);
+  for (const fact of profile.facts.filter((f) => selected.has(f.id)))
+    if (fact.conflicts?.some((c) => !c.resolved))
+      throw new Error(`Fact ${fact.id} has unresolved conflicts`);
   for (const passage of [draft.summary, ...draft.coverLetter, ...draft.email.paragraphs].filter(
     Boolean,
   )) {
@@ -322,10 +357,20 @@ export function validateEvidence(profile: Profile, draft: Draft): void {
     ...draft.coverLetter.map((p) => p.text),
     draft.email.subject,
     ...draft.email.paragraphs.map((p) => p.text),
-    ...profile.facts.filter((f) => selected.has(f.id)).map((f) => JSON.stringify(f)),
+    ...profile.facts
+      .filter((f) => selected.has(f.id))
+      .map((f) =>
+        JSON.stringify(f, (key, value) =>
+          ['sources', 'verification', 'conflicts'].includes(key) ? undefined : value,
+        ),
+      ),
     draft.recipient?.hiringManager,
     ...(draft.recipient?.addressLines ?? []),
   ].join('\n');
+  if (rendered.includes('\u2014'))
+    throw new Error(
+      'Document wording contains an em dash. Replace it with a comma, colon, or separate sentence.',
+    );
   if (
     /\[(?:date|company[^\]]*|job[^\]]*|hiring[^\]]*|insert[^\]]*|your[^\]]*)\]|\{\{|\bTODO\b|\bTBD\b/i.test(
       rendered,

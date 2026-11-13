@@ -51,6 +51,7 @@ export class ApplicationRunner {
             await this.kit.event(app, 'running', 'attempt-snapshot', attemptId);
             // Persist uncertainty BEFORE making an irreversible network action.
             await this.kit.event(app, 'running', 'commit-started', `Step ${index}: ${step.action}`);
+            await this.kit.store.checkpoint();
           }
           await this.execute(step, c.packet.answers, applicationId, c.build.revision);
           app.nextStep = index + 1;
@@ -58,8 +59,9 @@ export class ApplicationRunner {
             app,
             step.action === 'submit' ? 'submitted' : 'running',
             step.action === 'submit' ? 'submitted' : 'step-complete',
-            `Step ${index}: ${step.action}${commit ? ' — confirmation matched' : ''}`,
+            `Step ${index}: ${step.action}${commit ? ': confirmation matched' : ''}`,
           );
+          if (commit) await this.kit.store.checkpoint();
         } catch {
           const attempted = commit && app.events.at(-1)?.type === 'commit-started';
           await this.kit.event(

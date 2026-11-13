@@ -186,3 +186,8 @@ export async function portal(
       }),
   };
 }
+
+export async function replaceProfile(kit: Kit, value: unknown, confirm = false) {
+  const preview = await kit.previewProfile(value, 'replace', confirm);
+  return kit.importProfile(value, confirm, { mode: 'replace', reviewDigest: preview.digest });
+}

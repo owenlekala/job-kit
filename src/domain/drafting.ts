@@ -79,7 +79,7 @@ export function startingDraft(
       },
     ],
     email: {
-      subject: `Application for ${job.title} — ${profile.name}`,
+      subject: `Application for ${job.title}: ${profile.name}`,
       paragraphs: [
         {
           text: `Please find my application for the ${job.title} position attached. My background includes ${factEvidence(capability)}.`,

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { Store } from '../src/adapters/store.js';
 import { installSkills } from '../src/adapters/skills.js';
 import { Application, Build, Draft, Packet } from '../src/domain/models.js';
-import { setup, seed, approve, applicationPacket } from './support.js';
+import { setup, seed, replaceProfile, approve, applicationPacket } from './support.js';
 
 test('private storage is atomic, path-contained, locked, and idempotent', async () => {
   const s = await setup();
@@ -54,7 +54,7 @@ test('reviews bind document bytes, source facts, and form answers', async () => 
     await approve(s.kit);
     const profile = await s.kit.profile();
     profile.headline = 'Changed headline';
-    await s.kit.importProfile(profile, true);
+    await replaceProfile(s.kit, profile, true);
     await assert.rejects(s.kit.approvedContext('application-one', batch), /rebuild/);
   } finally {
     await s.cleanup();

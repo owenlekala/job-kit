@@ -1,3 +1,4 @@
+import { validateDocumentWording } from './wording.js';
 import {
   validateEvidence,
   type Profile,
@@ -94,7 +95,7 @@ export function documentModel(
           : selected.filter((f) => group.kinds.includes(f.kind)).map(resumeEntry),
     }))
     .filter((s) => s.entries.length);
-  return {
+  const model: DocumentModel = {
     name: profile.name,
     headline: draft.headline,
     contact: [
@@ -116,6 +117,8 @@ export function documentModel(
     coverLetter: draft.coverLetter.map((p) => p.text),
     email: { subject: draft.email.subject, paragraphs: draft.email.paragraphs.map((p) => p.text) },
   };
+  validateDocumentWording(model);
+  return model;
 }
 
 /** Complete verified evidence, including structured content; never just a job title. */
@@ -128,7 +131,7 @@ export function factEvidence(fact: Fact): string {
         .filter(Boolean)
         .join('\n');
     case 'project':
-      return [fact.text, fact.description, fact.technologies].filter(Boolean).join(' — ');
+      return [fact.text, fact.description, fact.technologies].filter(Boolean).join(': ');
     case 'education':
       return [fact.text, fact.details, fact.description].filter(Boolean).join('\n');
     default:

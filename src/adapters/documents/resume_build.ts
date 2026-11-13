@@ -94,7 +94,7 @@ function entryParagraphs(entry: ResumeEntry): Paragraph[] {
               ? [link(entry.name, entry.url)]
               : runs(entry.name, { bold: true, color: theme.colors.navy })),
             ...(entry.description
-              ? [...runs(' — ', { color: theme.colors.navy }), ...runs(entry.description)]
+              ? [...runs(': ', { color: theme.colors.navy }), ...runs(entry.description)]
               : []),
             ...(entry.technologies
               ? runs(`  (${entry.technologies})`, {
