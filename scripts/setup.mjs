@@ -6,7 +6,7 @@ if (Number(process.versions.node.split('.')[0]) < 24)
 const args = process.argv.slice(2);
 if (args.includes('--help')) {
   console.log(
-    'setup [--agent all|codex|claude|cursor] [--skip-browser]\nInstalls locked dependencies, builds the CLI, checks for an installed browser, initializes private storage and installs project skills. No browser is downloaded. --skip-browser skips the browser check.',
+    'setup [--agent all|codex|claude|cursor] [--skip-browser]\nInstalls locked dependencies, builds the CLI, checks for an installed browser, initializes private storage and installs missing project skills while preserving existing copies. No browser is downloaded. --skip-browser skips the browser check.',
   );
   process.exit(0);
 }
@@ -43,6 +43,7 @@ run(process.execPath, [
   agent,
   '--target',
   root,
+  '--skip-existing',
 ]);
 run(process.execPath, ['dist/cli/index.js', 'doctor']);
 console.log(

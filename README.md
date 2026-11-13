@@ -32,7 +32,7 @@ applykit doctor
 applykit init --interactive
 ```
 
-Setup can be rerun without replacing profile data or changed skills. It reports conflicting installed skills instead of overwriting them; review changes before using `skills install --overwrite`. Use `--skip-browser` for document-free setup checks; it skips browser validation, and rendering or portal automation still requires a compatible browser.
+Setup can be rerun without replacing profile data or changed skills. It installs missing skill folders, preserves all existing copies, and reports their paths in `skipped`. To update installed skills, review the differences against `skills/` before running `node dist/cli/index.js skills install --agent all --target . --overwrite`. Direct `skills install` still rejects differing copies by default; use `--skip-existing` to preserve them, or `--overwrite` to replace reviewed copies. These two options cannot be combined. Use `--skip-browser` for document-free setup checks; it skips browser validation, and rendering or portal automation still requires a compatible browser.
 
 ## Your private workspace
 

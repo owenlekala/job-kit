@@ -243,7 +243,7 @@ test('skills install for all agents, rerun safely, and detect conflicts', async 
     const { writeFile } = await import('node:fs/promises');
     await writeFile(file, 'user modification');
     await assert.rejects(installSkills('all', target), /differs/);
-    await installSkills('all', target, true);
+    await installSkills('all', target, { overwrite: true });
     assert.match(await readFile(file, 'utf8'), /name: tailor-resume/);
   } finally {
     await rm(target, { recursive: true, force: true });

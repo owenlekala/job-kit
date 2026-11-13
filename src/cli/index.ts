@@ -184,9 +184,14 @@ skills
   .requiredOption('--agent <agent>', 'codex, claude, cursor, or all')
   .option('--target <directory>', 'Project receiving the skills', process.cwd())
   .option('--overwrite', 'Replace conflicting installed copies')
+  .option('--skip-existing', 'Preserve existing skill folders and install only missing ones')
   .action(
     execute(
-      async (options) => installSkills(options.agent, options.target, options.overwrite),
+      async (options) =>
+        installSkills(options.agent, options.target, {
+          overwrite: options.overwrite,
+          skipExisting: options.skipExisting,
+        }),
       false,
     ),
   );
