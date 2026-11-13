@@ -3,6 +3,14 @@ import { stdin, stdout } from 'node:process';
 import { randomUUID } from 'node:crypto';
 import { Fact, Profile } from '../domain/models.js';
 
+/** Normalize terminal input while the profile schema still validates supported values. */
+export function parseWorkArrangements(value: string): string[] {
+  return value
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 /** Terminal presentation only. Saving, revisions, and verification remain application use cases. */
 export async function editProfile(current?: Profile) {
   if (!stdin.isTTY) throw new Error('The guided profile editor requires an interactive terminal');
@@ -30,7 +38,7 @@ export async function editProfile(current?: Profile) {
     const locations = list(
       await ask('Target locations, separated by commas', current?.preferences.locations.join(', ')),
     );
-    const arrangements = list(
+    const arrangements = parseWorkArrangements(
       await ask(
         'Work arrangements: remote, hybrid, onsite',
         current?.preferences.arrangements.join(', '),

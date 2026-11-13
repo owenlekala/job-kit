@@ -19,3 +19,7 @@ private/
 *.auth.json
 
 *.applykit
+
+# Personal profile notes and local copies; keep the reusable questionnaire.
+/templates/profile-notes*.md
+!/templates/profile-notes-template.md

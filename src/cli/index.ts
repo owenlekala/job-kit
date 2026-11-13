@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { Profiles, ProfileRevision } from '../application/profiles.js';
 import { migrateWorkspace } from '../application/maintenance.js';
-import { editProfile } from '../adapters/profile-editor.js';
+import { editProfile, parseWorkArrangements } from '../adapters/profile-editor.js';
 import { writeReviewPage } from '../adapters/review-page.js';
 import { createBackup, restoreBackup } from '../adapters/archive.js';
 import { readSecret } from '../adapters/terminal-secret.js';
@@ -101,10 +101,7 @@ program
                 .split(',')
                 .map((v: string) => v.trim())
                 .filter(Boolean),
-              arrangements: arrangements
-                .split(',')
-                .map((v: string) => v.trim())
-                .filter(Boolean),
+              arrangements: parseWorkArrangements(arrangements),
             },
             facts: [
               {

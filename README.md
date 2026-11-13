@@ -50,6 +50,16 @@ Concurrent mutations use a heartbeat lock; a lock abandoned by a crashed process
 
 ## Create and verify a profile
 
+### Fill in a Markdown file instead of terminal prompts
+
+Use [the profile questionnaire](templates/profile-notes-template.md) to enter your information in your editor: contact details, job preferences, experience, projects, skills, education, certifications, languages, and supporting sources. Keep your completed copy in your private workspace, outside the repository. On macOS, a suitable location is `~/Library/Application Support/job-application-kit/profile-notes.md`. Leave unknown details blank and duplicate sections for additional entries.
+
+Then tell your agent: "Read my profile-notes.md, prepare my profile, and show me what needs confirmation before importing it." You do not need to type CLI commands yourself; the agent can handle conversion, import, and validation. Markdown is source notes until it is converted into profile JSON and imported. The agent must obtain your confirmation before verifying facts, and profile setup does not authorize submitting applications. Existing profiles require a reviewed change preview before updating them.
+
+Interactive entry remains available through `init --interactive` or `profile edit`. Work arrangements accept mixed case, such as `Remote, hybrid, onsite`; stored values use lowercase.
+
+### Import structured profile JSON
+
 The files under `examples/` describe a **fictional applicant and employer**. Use them only for learning and offline document demos. Replace their contents with your own verified information before preparing real applications.
 
 ```sh
