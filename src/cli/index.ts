@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { readFile, access, mkdtemp } from 'node:fs/promises';
+import { readFile, mkdtemp } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +13,7 @@ import { createBackup, restoreBackup } from '../adapters/archive.js';
 import { readSecret } from '../adapters/terminal-secret.js';
 import type { ImportMode } from '../domain/profile-changes.js';
 import { stdin, stdout } from 'node:process';
-import { chromium } from 'playwright';
+import { findBrowser, browserHelp } from '../adapters/browser-runtime.js';
 import { z } from 'zod';
 import { Store } from '../adapters/store.js';
 import { Renderer } from '../adapters/renderer.js';
@@ -137,10 +137,12 @@ program
       } catch {
         problems.push('Initialize the workspace: applykit init');
       }
+      let browser;
       try {
-        await access(chromium.executablePath());
-      } catch {
-        problems.push('Install Chromium: npx playwright install chromium');
+        browser = await findBrowser();
+        if (!browser) problems.push(browserHelp);
+      } catch (error) {
+        problems.push((error as Error).message);
       }
       let vault = 'unavailable';
       try {
@@ -152,7 +154,8 @@ program
         node: process.version,
         platform: process.platform,
         workspace: kit.store.root,
-        browser: chromium.executablePath(),
+        browser: browser?.executablePath ?? null,
+        browserName: browser?.name ?? null,
         vault,
         problems,
       };

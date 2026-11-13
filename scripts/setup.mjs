@@ -6,7 +6,7 @@ if (Number(process.versions.node.split('.')[0]) < 24)
 const args = process.argv.slice(2);
 if (args.includes('--help')) {
   console.log(
-    'setup [--agent all|codex|claude|cursor] [--skip-browser]\nInstalls locked dependencies, builds the CLI, initializes private storage and installs project skills.',
+    'setup [--agent all|codex|claude|cursor] [--skip-browser]\nInstalls locked dependencies, builds the CLI, checks for an installed browser, initializes private storage and installs project skills. No browser is downloaded. --skip-browser skips the browser check.',
   );
   process.exit(0);
 }
@@ -28,7 +28,12 @@ const run = (command, argv) => {
 if (process.platform === 'win32') run('cmd.exe', ['/d', '/s', '/c', 'npm ci --no-fund --no-audit']);
 else run('npm', ['ci', '--no-fund', '--no-audit']);
 run(process.execPath, ['node_modules/typescript/bin/tsc']);
-if (!skipBrowser) run(process.execPath, ['node_modules/playwright/cli.js', 'install', 'chromium']);
+if (!skipBrowser) {
+  const { findBrowser, browserHelp } = await import('../dist/adapters/browser-runtime.js');
+  const browser = await findBrowser();
+  if (!browser) throw new Error(browserHelp);
+  console.log(`Using ${browser.name}: ${browser.executablePath}`);
+}
 run(process.execPath, ['dist/cli/index.js', 'init']);
 run(process.execPath, [
   'dist/cli/index.js',

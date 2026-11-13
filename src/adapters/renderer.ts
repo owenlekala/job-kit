@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { chromium } from 'playwright';
+import { launchBrowser } from './browser-runtime.js';
 import { Packer } from 'docx';
 import { PDFDocument } from 'pdf-lib';
 import type { ArtifactRenderer } from '../application/ports.js';
@@ -20,7 +20,7 @@ export class Renderer implements ArtifactRenderer {
       readFile(new URL('templates/document.css', packageRoot), 'utf8'),
       loadFonts(),
     ]);
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchBrowser(true);
     const files: Record<string, Uint8Array> = {},
       pages = { resume: 0, coverLetter: 0 };
     try {

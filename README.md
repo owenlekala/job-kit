@@ -16,7 +16,13 @@ On native Windows, use PowerShell:
 .\setup.ps1 --agent all
 ```
 
-Setup installs locked npm dependencies and Chromium, builds the CLI, initializes private storage, and installs seven project skills. Choose `codex`, `claude`, or `cursor` instead of `all` if preferred. On Linux, Chromium may require system libraries; install them using `npx playwright install --with-deps chromium` with your system administrator's permission. Setup does not install or log in to Bitwarden.
+Setup installs locked npm dependencies, builds the CLI, detects an installed browser, initializes private storage, and installs seven project skills. It does not download a browser. Choose `codex`, `claude`, or `cursor` instead of `all` if preferred. Setup does not install or log in to Bitwarden.
+
+PDF rendering and portal automation share browser detection on macOS, Windows, and Linux. A compatible system default is preferred, followed by installed Chrome, Brave, Edge, Chromium, or Vivaldi, then an existing Playwright Chromium installation. Safari and regular Firefox are incompatible with the PDF workflow; a compatible installed browser is used instead. Browsers launch with a temporary isolated profile, without your personal cookies or saved logins.
+
+For a custom installation or another Chromium-based browser, set `APPLYKIT_BROWSER_PATH` to its absolute executable path before setup and when running the CLI. On macOS, this is the binary inside the app, for example `/Applications/Brave Browser.app/Contents/MacOS/Brave Browser`. An invalid explicit path fails with an error instead of silently choosing another browser. `applykit doctor` reports the selected browser.
+
+If no compatible browser is installed, install one or explicitly run `npx playwright install chromium`. On Linux, Playwright Chromium may require system libraries; `npx playwright install --with-deps chromium` installs those too and may require administrator permission.
 
 Use `node dist/cli/index.js <command>` from this directory. Optionally run `npm link` once to expose the shorter `applykit` command used below. On restricted machines, keep using the Node entrypoint instead of linking globally. `npm run dev -- <command>` runs from source.
 
@@ -26,7 +32,7 @@ applykit doctor
 applykit init --interactive
 ```
 
-Setup can be rerun without replacing profile data or changed skills. It reports conflicting installed skills instead of overwriting them; review changes before using `skills install --overwrite`. Use `--skip-browser` only when Chromium is already installed or for document-free setup checks.
+Setup can be rerun without replacing profile data or changed skills. It reports conflicting installed skills instead of overwriting them; review changes before using `skills install --overwrite`. Use `--skip-browser` for document-free setup checks; it skips browser validation, and rendering or portal automation still requires a compatible browser.
 
 ## Your private workspace
 

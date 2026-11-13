@@ -1,5 +1,4 @@
 import {
-  chromium,
   type Browser,
   type BrowserContext,
   type Page,
@@ -8,6 +7,7 @@ import {
 } from 'playwright';
 import { checkWebUrl } from '../domain/models.js';
 import type { BrowserDriver, PageSnapshot } from '../application/ports.js';
+import { launchBrowser } from './browser-runtime.js';
 
 /** One ephemeral browser context per application. No traces, profile, or cookies on disk. */
 export class PlaywrightBrowser implements BrowserDriver {
@@ -28,7 +28,7 @@ export class PlaywrightBrowser implements BrowserDriver {
   }
   private async active() {
     if (!this.page) {
-      this.browser = await chromium.launch({ headless: !this.headed });
+      this.browser = await launchBrowser(!this.headed);
       this.context = await this.browser.newContext({
         acceptDownloads: false,
         serviceWorkers: 'block',
