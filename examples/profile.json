@@ -18,25 +18,54 @@
     {
       "id": "backend",
       "kind": "skill",
+      "label": "Languages & Backend",
       "text": "TypeScript, Node.js, PostgreSQL, REST APIs, automated testing",
       "verified": true
     },
     {
       "id": "delivery",
       "kind": "experience",
-      "text": "Software Engineer — Example Studio, 2022–2025\nBuilt and maintained internal reporting services with TypeScript and PostgreSQL.",
+      "text": "Software Engineer — Example Studio",
+      "dates": "2022–2025",
+      "context": "Cape Town, South Africa • Internal business software",
+      "bullets": [
+        "Built and maintained internal reporting services with TypeScript and PostgreSQL."
+      ],
       "verified": true
     },
     {
       "id": "project",
       "kind": "project",
-      "text": "Inventory Console — Built an inventory dashboard with React and Node.js for an internal operations team.",
+      "text": "Inventory Console",
+      "url": "https://example.com/inventory",
+      "technologies": "React, Node.js, PostgreSQL",
+      "description": "Built an inventory dashboard for an internal operations team.",
       "verified": true
     },
     {
       "id": "education",
       "kind": "education",
-      "text": "Bachelor of Science in Computer Science — Example University, completed 2021",
+      "text": "Bachelor of Science in Computer Science",
+      "details": "Example University • Completed 2021",
+      "description": "Studied software development, databases, and systems analysis.",
+      "verified": true
+    },
+    {
+      "id": "summary",
+      "kind": "summary",
+      "text": "Software engineer building TypeScript services, relational APIs, and practical internal tools.",
+      "verified": true
+    },
+    {
+      "id": "availability",
+      "kind": "availability",
+      "text": "Open to Remote / Hybrid Opportunities",
+      "verified": true
+    },
+    {
+      "id": "collaboration",
+      "kind": "strength",
+      "text": "Practical Delivery — build tools that support internal business operations.",
       "verified": true
     }
   ]

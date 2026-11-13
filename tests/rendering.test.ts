@@ -5,7 +5,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { setup, seed } from './support.js';
 import { Build } from '../src/domain/models.js';
 
-test('fictional profile produces A4 selectable-text PDFs, DOCX, Markdown and working links', async () => {
+test('paired original layouts produce Letter PDFs with the original name sizes and inline contacts', async () => {
   const s = await setup(true);
   try {
     await seed(s.kit);
@@ -17,16 +17,36 @@ test('fictional profile produces A4 selectable-text PDFs, DOCX, Markdown and wor
         `artifacts/application-one/${build.revision}/${stem}.pdf`,
       );
       const pdf = await PDFDocument.load(bytes);
-      assert.ok(Math.abs(pdf.getPage(0).getWidth() - 595.28) < 2);
+      assert.ok(Math.abs(pdf.getPage(0).getWidth() - 612) < 1);
+      assert.ok(Math.abs(pdf.getPage(0).getHeight() - 792) < 1);
       const doc = await getDocument({ data: Uint8Array.from(bytes), useSystemFonts: true }).promise;
       const page = await doc.getPage(1),
         content = await page.getTextContent();
       const text = content.items.map((item) => ('str' in item ? item.str : '')).join(' ');
-      assert.match(text, /Alex Morgan/);
+      assert.match(text, /ALEX MORGAN/);
       assert.match(text, /TypeScript/);
       assert.doesNotMatch(text, /\[Company|\[Date|TODO/);
       const annotations = await page.getAnnotations();
       assert.ok(annotations.some((a) => a.url === 'https://example.com/'));
+      const name = content.items.find((item) => 'str' in item && item.str.includes('ALEX MORGAN'));
+      assert.ok(name && 'height' in name);
+      assert.ok(Math.abs(name.height - (stem === 'resume' ? 20 : 18)) < 0.1);
+      const email = content.items.find(
+        (item) => 'str' in item && item.str.includes('alex.jobs@example.com'),
+      );
+      const portfolio = content.items.find(
+        (item) => 'str' in item && item.str.includes('Portfolio'),
+      );
+      assert.ok(email && 'transform' in email && portfolio && 'transform' in portfolio);
+      assert.ok(
+        Math.abs(email.transform[5] - portfolio.transform[5]) < 1,
+        'contact details and links must share one row',
+      );
+      if (stem === 'resume') {
+        assert.match(text, /PROFESSIONAL SUMMARY/);
+        assert.match(text, /CORE STRENGTHS/);
+        assert.match(text, /KEY PROJECTS/);
+      }
       await doc.destroy();
       const docx = await s.store.readBytes(
         `artifacts/application-one/${build.revision}/${stem}.docx`,
@@ -36,7 +56,7 @@ test('fictional profile produces A4 selectable-text PDFs, DOCX, Markdown and wor
         new TextDecoder().decode(
           await s.store.readBytes(`artifacts/application-one/${build.revision}/${stem}.md`),
         ),
-        /Alex Morgan/,
+        /ALEX MORGAN/,
       );
     }
   } finally {

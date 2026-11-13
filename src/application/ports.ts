@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { DocumentModel } from '../domain/models.js';
+import type { DocumentModel } from '../domain/documents.js';
 
 export interface Workspace {
   readonly root: string;
@@ -19,9 +19,11 @@ export interface CredentialVault {
   create(email: string, origin: string, tenant: string): Promise<string>;
 }
 export interface ArtifactRenderer {
-  render(
-    model: DocumentModel,
-  ): Promise<{ files: Record<string, Uint8Array>; pages: { resume: number; coverLetter: number } }>;
+  render(model: DocumentModel): Promise<{
+    files: Record<string, Uint8Array>;
+    pages: { resume: number; coverLetter: number };
+    warnings?: string[];
+  }>;
 }
 export interface PageSnapshot {
   url: string;

@@ -63,7 +63,7 @@ applykit presets save backend --name "Backend Engineer" --facts backend,delivery
 applykit presets list
 ```
 
-Facts support any profession. The software-engineering examples are not built-in eligibility rules. Each fact is a complete resume entry; include titles/dates and useful details in its text. Correcting a fact requires updating and re-verifying the profile.
+Facts support any profession. The software-engineering examples are not built-in eligibility rules. Structured fields preserve the original document blocks: a skill `label`; experience `dates`, `context`, and `bullets`; project `url`, `technologies`, and `description`; education `details` and `description`. The `text` field supplies the entry heading or primary content. `strength` and `availability` facts supply Core Strengths and the centered availability line. Existing flat facts still render without inventing missing details. Correcting any factual field requires updating and re-verifying the profile.
 
 ## Add companies and jobs
 
@@ -95,7 +95,13 @@ Each build writes a new revision containing:
 - `cover-letter.md`, `cover-letter.docx`, and `cover-letter.pdf`
 - `email.md` (a draft only; never sent automatically)
 
-All outputs use the same validated content model. PDF uses Chromium, bundled Carlito fonts, A4 paper, and navy/blue styling; Word uses the same content and styling with Carlito or a locally available fallback. Word and PDF pagination can differ. Review every page in both formats. Targets are two resume pages and one cover-letter page; overflow blocks approval until content is shortened or you explicitly use `application build --allow-overflow` after reviewing it. Nothing is silently dropped.
+All outputs use the same validated content model. The paired templates preserve the original `resume_build.js` and `cover_letter.js` design and file structure: US Letter paper, Calibri, navy/blue/gray colors, centered uppercase names, one contact/link row, original paragraph spacing, and document-specific margins. The resume uses a 20-point name, ruled 11-point section headings, labelled skill rows, dated job headers, project links/technology, and structured education. The cover letter uses an 18-point name, 11-point body, date/recipient block, four-part body, and separate closing/name paragraphs. Empty resume sections and unknown recipient details are omitted.
+
+The letter explains what the candidate can do, connects verified work to the role, and distinguishes direct experience from transferable foundations and skills to learn. Neither drafts nor skills should inflate seniority, credentials, expertise, tenure, or leadership scope to match a posting. The initial draft is a conservative starting point; the writing skill supplies the final tailored explanation and the applicant reviews it.
+
+Word always requests Calibri. PDF embeds locally available Calibri regular/bold/italic/bold italic faces. To supply your licensed fonts, set `APPLYKIT_FONT_DIR` to their directory before building (standard filenames such as `calibri.ttf`, `calibrib.ttf`, `calibrii.ttf`, and `calibriz.ttf` are recognized). If Calibri is unavailable, PDF embeds metric-compatible Carlito and records a build warning; it does not silently claim exact font fidelity. Invalid explicitly configured fonts fail the build. Browser and Word engines can still paginate differently. Review every page in both formats. Targets are two resume pages and one cover-letter page; overflow blocks approval until content is shortened or you explicitly use `application build --allow-overflow` after reviewing it. Nothing is silently dropped.
+
+The corresponding template modules are `src/adapters/documents/resume_build.ts` and `cover_letter.ts`; shared style values live in `theme.ts`, and the PDF stylesheet uses those same values. Role-specific content should never introduce a different layout.
 
 ## Connect portal accounts
 

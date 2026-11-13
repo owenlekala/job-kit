@@ -4,7 +4,16 @@ All persisted business records use `version: 1`; unknown versions/fields are rej
 
 ## Profile and sources
 
-`examples/profile.json` is a complete fictional profile. Each `facts` entry has `id`, `kind`, `text`, and `verified`. Kinds are `summary`, `skill`, `experience`, `project`, `education`, `achievement`, and `language`. Resume facts render exactly as supplied, in the selected order within their sections. The toolkit checks evidence IDs and placeholders but cannot establish factual truth automatically.
+`examples/profile.json` is a complete fictional profile. Each `facts` entry has `id`, `kind`, `text`, and `verified`. Kinds are `summary`, `skill`, `strength`, `availability`, `experience`, `project`, `education`, `achievement`, and `language`. Entries retain their verified wording and selection order within the original section sequence: Professional Summary, Technical Skills, Core Strengths, Professional Experience, Key Projects, Education, and optional Languages. `availability` appears in the resume's second centered contact line; achievements appear with Core Strengths. Empty sections are omitted.
+
+Optional typed fields preserve the original scripts' structure without guessing facts:
+
+- `skill`: `text` contains the skills; `label` supplies the bold category.
+- `experience`: `text` is the job title/employer heading; `dates`, `context`, and `bullets` provide the right-aligned dates, italic context line, and responsibilities. Legacy newline-separated text is preserved as heading plus body lines, including when additional explicit bullets exist.
+- `project`: `text` is the project name; `url`, `description`, and `technologies` supply its link, explanation, and italic stack.
+- `education`: `text` is the qualification; `details` holds institution/date/completion status and `description` holds the explanation. Preserve incomplete education explicitly.
+
+All fields of a fact share its verification flag and are included in evidence and approval fingerprints. Extra fields belonging to a different kind are rejected. Flat version-1 facts remain valid. The toolkit checks references and placeholders throughout structured fields but cannot establish factual truth automatically.
 
 Import a corrected profile JSON and explicitly confirm facts. Text/JavaScript imports are saved as private unverified source records with filename, import timestamp, and content; they are never run. Preserve uncertainty about incomplete education or conflicting titles until the applicant resolves it.
 
@@ -16,9 +25,13 @@ Job: `version`, `id`, `companyId`, `title`, `url`, `description`, `sourceUrl`, `
 
 ## Draft
 
-A private application draft selects `factIds` and contains a `headline`, an explicit `date` (`YYYY-MM-DD`), an optional `summary`, `coverLetter`, and `email`.
+A private application draft selects `factIds` and contains a `headline`, an explicit `date` (`YYYY-MM-DD`), an optional `summary`, `coverLetter`, and `email`. Optional `recipient` contains a known `hiringManager` and `addressLines`; company name comes from the company record. Unknown names/addresses are omitted, with a Hiring Team greeting, instead of rendering placeholders.
 
 Every summary/body paragraph is `{ "text": "…", "evidence": ["verified-fact-id"] }`. Evidence must refer to selected, verified facts. `email` has `subject` and `paragraphs`. Letter and email greetings/sign-offs are added by the renderer. Use `application update --draft` to validate imports; build new documents after changes.
+
+Cover-letter prose should follow the original four-part structure: opening, relevant delivery, transferable capabilities/adaptability, and invitation to discuss the role. Explain specific supported tasks and how they relate to the posting. Do not promote the candidate to the posting's seniority or claim a requested technology from experience with a similar one. For example, verified Node.js API and PostgreSQL work supports a discussion of transferable API/data fundamentals for learning a Python backend; it does not verify Python experience. Evidence IDs are traceability, not semantic proof of a paraphrase. Human review remains required.
+
+Builds use the original US Letter layouts. An optional `warnings` array records font fallback; when Calibri files are absent, PDF uses Carlito while DOCX retains the original Calibri font request. Provide the four licensed faces through `APPLYKIT_FONT_DIR` for matching font rendering. Layout changes take effect on a new build and its new approval fingerprint; existing artifact revisions remain untouched.
 
 ## Portal packet
 

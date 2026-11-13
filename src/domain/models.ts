@@ -14,22 +14,42 @@ export const url = z
   .refine((v) => ['https:', 'http:'].includes(new URL(v).protocol), 'Use an HTTP(S) URL')
   .refine((v) => !new URL(v).username && !new URL(v).password, 'URLs may not contain credentials');
 const timestamp = z.string().datetime();
-export const Fact = z
-  .object({
-    id,
-    kind: z.enum([
-      'summary',
-      'skill',
-      'experience',
-      'project',
-      'education',
-      'achievement',
-      'language',
-    ]),
-    text,
-    verified: z.boolean().default(false),
-  })
-  .strict();
+const factFields = { id, text, verified: z.boolean().default(false) };
+export const Fact = z.discriminatedUnion('kind', [
+  z.object({ ...factFields, kind: z.literal('summary') }).strict(),
+  z.object({ ...factFields, kind: z.literal('availability') }).strict(),
+  z.object({ ...factFields, kind: z.literal('strength') }).strict(),
+  z.object({ ...factFields, kind: z.literal('achievement') }).strict(),
+  z.object({ ...factFields, kind: z.literal('language') }).strict(),
+  z.object({ ...factFields, kind: z.literal('skill'), label: text.optional() }).strict(),
+  z
+    .object({
+      ...factFields,
+      kind: z.literal('experience'),
+      dates: text.optional(),
+      context: text.optional(),
+      bullets: z.array(text).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...factFields,
+      kind: z.literal('project'),
+      url: url.optional(),
+      technologies: text.optional(),
+      description: text.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...factFields,
+      kind: z.literal('education'),
+      details: text.optional(),
+      description: text.optional(),
+    })
+    .strict(),
+]);
+export type Fact = z.infer<typeof Fact>;
 export const Profile = z
   .object({
     version: z.literal(1),
@@ -94,6 +114,10 @@ export const Draft = z
     headline: text,
     factIds: z.array(id).min(1),
     summary: EvidenceText.optional(),
+    recipient: z
+      .object({ hiringManager: text.optional(), addressLines: z.array(text).default([]) })
+      .strict()
+      .optional(),
     coverLetter: z.array(EvidenceText).min(1),
     email: z.object({ subject: text, paragraphs: z.array(EvidenceText).min(1) }).strict(),
     date: z.iso.date(),
@@ -251,63 +275,10 @@ export const Build = z
     pages: z.object({ resume: z.number().int(), coverLetter: z.number().int() }),
     overflowAccepted: z.boolean(),
     builtAt: timestamp,
+    warnings: z.array(text).optional(),
   })
   .strict();
 export type Build = z.infer<typeof Build>;
-export interface DocumentModel {
-  name: string;
-  headline: string;
-  contact: string[];
-  links: { label: string; url: string }[];
-  summary?: string;
-  sections: { title: string; paragraphs: string[] }[];
-  date: string;
-  company: string;
-  jobTitle: string;
-  coverLetter: string[];
-  email: { subject: string; paragraphs: string[] };
-}
-export function documentModel(
-  profile: Profile,
-  draft: Draft,
-  job: Job,
-  company: Company,
-): DocumentModel {
-  validateEvidence(profile, draft);
-  const labels = {
-    skill: 'Technical Skills',
-    experience: 'Professional Experience',
-    project: 'Selected Projects',
-    education: 'Education',
-    achievement: 'Achievements',
-    language: 'Languages',
-    summary: 'Additional Background',
-  };
-  const selected = draft.factIds.map((key) => profile.facts.find((f) => f.id === key)!);
-  return {
-    name: profile.name,
-    headline: draft.headline,
-    contact: [
-      profile.contact.location,
-      profile.contact.phone,
-      profile.contact.applicationEmail ?? profile.contact.email,
-    ].filter((v): v is string => Boolean(v)),
-    links: profile.contact.links,
-    summary: draft.summary?.text,
-    sections: Object.entries(labels)
-      .map(([kind, title]) => ({
-        title,
-        paragraphs: selected.filter((f) => f.kind === kind).map((f) => f.text),
-      }))
-      .filter((s) => s.paragraphs.length),
-    date: draft.date,
-    company: company.name,
-    jobTitle: job.title,
-    coverLetter: draft.coverLetter.map((p) => p.text),
-    email: { subject: draft.email.subject, paragraphs: draft.email.paragraphs.map((p) => p.text) },
-  };
-}
-
 export function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
   if (value && typeof value === 'object')
@@ -351,7 +322,9 @@ export function validateEvidence(profile: Profile, draft: Draft): void {
     ...draft.coverLetter.map((p) => p.text),
     draft.email.subject,
     ...draft.email.paragraphs.map((p) => p.text),
-    ...profile.facts.filter((f) => selected.has(f.id)).map((f) => f.text),
+    ...profile.facts.filter((f) => selected.has(f.id)).map((f) => JSON.stringify(f)),
+    draft.recipient?.hiringManager,
+    ...(draft.recipient?.addressLines ?? []),
   ].join('\n');
   if (
     /\[(?:date|company[^\]]*|job[^\]]*|hiring[^\]]*|insert[^\]]*|your[^\]]*)\]|\{\{|\bTODO\b|\bTBD\b/i.test(

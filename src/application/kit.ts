@@ -15,10 +15,11 @@ import {
   assertNoSecrets,
   checkWebUrl,
   digest,
-  documentModel,
   id,
   validateEvidence,
 } from '../domain/models.js';
+import { documentModel } from '../domain/documents.js';
+import { startingDraft } from '../domain/drafting.js';
 import type { ArtifactRenderer, CredentialVault, Workspace } from './ports.js';
 
 const now = () => new Date().toISOString();
@@ -50,6 +51,9 @@ export class Kit {
     const profile = await this.store.read('profile.json', Profile),
       config = await this.config();
     profile.contact.links.forEach((link) => checkWebUrl(link.url, config.allowLocalhost));
+    profile.facts.forEach((fact) => {
+      if (fact.kind === 'project' && fact.url) checkWebUrl(fact.url, config.allowLocalhost);
+    });
     return profile;
   }
   async importProfile(value: unknown, confirm = false) {
@@ -57,6 +61,9 @@ export class Kit {
     assertNoSecrets(value);
     const p = Profile.parse(value);
     p.contact.links.forEach((link) => checkWebUrl(link.url, config.allowLocalhost));
+    p.facts.forEach((fact) => {
+      if (fact.kind === 'project' && fact.url) checkWebUrl(fact.url, config.allowLocalhost);
+    });
     if (!confirm) p.facts = p.facts.map((f) => ({ ...f, verified: false }));
     await this.store.write('profile.json', p);
     return {
@@ -221,34 +228,12 @@ export class Kit {
     const selected = selectedIds ?? profile.facts.filter((f) => f.verified).map((f) => f.id);
     if (!selected.length)
       throw new Error('No verified facts available; confirm profile facts first');
-    const fact = profile.facts.find((f) => f.id === selected[0]);
-    if (!fact) throw new Error('Selected fact does not exist');
     const date = new Intl.DateTimeFormat('en-CA', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
     }).format(new Date());
-    const draft = Draft.parse({
-      version: 1,
-      headline: profile.headline,
-      factIds: selected,
-      date,
-      coverLetter: [
-        {
-          text: `I am applying for the ${job.title} position at ${company.name}. ${fact.text}`,
-          evidence: [fact.id],
-        },
-      ],
-      email: {
-        subject: `Application for ${job.title} — ${profile.name}`,
-        paragraphs: [
-          {
-            text: `Please find my application for the ${job.title} position attached. ${fact.text}`,
-            evidence: [fact.id],
-          },
-        ],
-      },
-    });
+    const draft = startingDraft(profile, job, company, selected, date);
     validateEvidence(profile, draft);
     const application = Application.parse({
       version: 1,
@@ -354,6 +339,7 @@ export class Kit {
       pages: output.pages,
       overflowAccepted: acceptOverflow,
       builtAt: now(),
+      ...(output.warnings?.length ? { warnings: output.warnings } : {}),
     });
     await this.store.write(`applications/${applicationId}/build.json`, build);
     c.application.nextStep = 0;
@@ -366,12 +352,14 @@ export class Kit {
     return {
       build,
       directory: this.store.file(`artifacts/${applicationId}/${revision}`),
-      warnings:
-        this.overflow(build) && !acceptOverflow
+      warnings: [
+        ...(output.warnings ?? []),
+        ...(this.overflow(build) && !acceptOverflow
           ? [
               'Page target exceeded; shorten the draft or rebuild with --allow-overflow after reviewing it',
             ]
-          : [],
+          : []),
+      ],
     };
   }
   async updateApplication(applicationId: string, input: { draft?: unknown; packet?: unknown }) {
