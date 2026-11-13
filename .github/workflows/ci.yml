@@ -1,0 +1,35 @@
+name: Verify toolkit
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - run: npm run format:check
+      - run: npm run build
+      - run: npm test
+      - run: npm run privacy
+      - name: Verify setup wrapper (Unix)
+        if: runner.os != 'Windows'
+        env:
+          APPLYKIT_HOME: ${{ runner.temp }}/applykit-workspace
+        run: sh setup.sh --skip-browser --agent all
+      - name: Verify setup wrapper (Windows)
+        if: runner.os == 'Windows'
+        env:
+          APPLYKIT_HOME: ${{ runner.temp }}/applykit-workspace
+        shell: pwsh
+        run: ./setup.ps1 --skip-browser --agent all

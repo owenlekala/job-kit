@@ -1,0 +1,69 @@
+@page {
+  size: A4;
+  margin: 15mm 18mm;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  font:
+    11pt/1.24 Carlito,
+    Arial,
+    sans-serif;
+  color: #111827;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+header {
+  text-align: center;
+  margin-bottom: 17pt;
+}
+h1 {
+  color: #1f2937;
+  font-size: 25pt;
+  margin: 0 0 3pt;
+  letter-spacing: 1pt;
+}
+.headline {
+  color: #2563eb;
+  font-size: 12pt;
+  font-weight: 700;
+  margin: 0 0 6pt;
+}
+.contact {
+  color: #4b5563;
+  font-size: 10pt;
+  margin: 3pt 0;
+}
+a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+h2 {
+  font-size: 11.5pt;
+  color: #1f2937;
+  text-transform: uppercase;
+  margin: 13pt 0 6pt;
+  break-after: avoid;
+}
+p {
+  margin: 0 0 7pt;
+  white-space: pre-line;
+  orphans: 2;
+  widows: 2;
+}
+li {
+  margin-bottom: 5pt;
+  white-space: pre-line;
+  break-inside: avoid;
+}
+ul {
+  margin: 0;
+  padding-left: 14pt;
+}
+.letter p {
+  margin-bottom: 12pt;
+}
+.date {
+  color: #4b5563;
+}

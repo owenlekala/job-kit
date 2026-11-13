@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "name": "Alex Morgan",
+  "headline": "Software Engineer",
+  "contact": {
+    "email": "alex@example.com",
+    "applicationEmail": "alex.jobs@example.com",
+    "phone": "+27 00 000 0000",
+    "location": "Cape Town, South Africa",
+    "links": [{ "label": "Portfolio", "url": "https://example.com" }]
+  },
+  "preferences": {
+    "roles": ["Backend Engineer", "Full-Stack Engineer"],
+    "locations": ["South Africa"],
+    "arrangements": ["remote", "hybrid"]
+  },
+  "facts": [
+    {
+      "id": "backend",
+      "kind": "skill",
+      "text": "TypeScript, Node.js, PostgreSQL, REST APIs, automated testing",
+      "verified": true
+    },
+    {
+      "id": "delivery",
+      "kind": "experience",
+      "text": "Software Engineer — Example Studio, 2022–2025\nBuilt and maintained internal reporting services with TypeScript and PostgreSQL.",
+      "verified": true
+    },
+    {
+      "id": "project",
+      "kind": "project",
+      "text": "Inventory Console — Built an inventory dashboard with React and Node.js for an internal operations team.",
+      "verified": true
+    },
+    {
+      "id": "education",
+      "kind": "education",
+      "text": "Bachelor of Science in Computer Science — Example University, completed 2021",
+      "verified": true
+    }
+  ]
+}

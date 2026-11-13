@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "id": "example-backend",
+  "companyId": "example-labs",
+  "title": "Backend Engineer",
+  "url": "https://careers.example.com/jobs/backend",
+  "description": "Fictional demonstration opening. Build TypeScript services and PostgreSQL-backed APIs. Work with product engineers and maintain automated tests.",
+  "sourceUrl": "https://careers.example.com/jobs/backend",
+  "verifiedAt": "2026-11-13T00:00:00.000Z",
+  "location": "Remote, South Africa"
+}
